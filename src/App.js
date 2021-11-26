@@ -1,8 +1,9 @@
 import React, { Component } from "react";
-import axios from "axios";
 import "./App.css";
+import config from './config.json'
+import http from "./services/httpServices";
 
-const apiEndPoint = "https://jsonplaceholder.typicode.com/posts";
+
 
 class App extends Component {
   state = {
@@ -10,21 +11,23 @@ class App extends Component {
   };
 
   async componentDidMount() {
-    const { data: posts } = await axios.get(apiEndPoint);
+    const { data: posts } = await http.get(config.apiEndPoint);
     this.setState({ posts });
   }
   handleAdd = async () => {
     const samplePost = { title: "Sample Title", body: "Sample body" };
-    const { data: post } = await axios.post(apiEndPoint, samplePost);
+    const { data: post } = await http.post(config.apiEndPoint, samplePost);
 
     const posts = [post, ...this.state.posts];
     this.setState({ posts });
   };
 
   handleUpdate = async (post) => {
-    post.title = "Updated Title";
-    await axios.put(apiEndPoint + "/" + post.id, post);
 
+    post.title = "Updated Title";
+    await http.put(config.apiEndPoint + "/" + post.id, post);
+
+   
     const posts = [...this.state.posts];
     const index = posts.indexOf(post);
     posts[index] = { ...post };
@@ -33,11 +36,22 @@ class App extends Component {
   };
 
   handleDelete = async (post) => {
-    await axios.delete(apiEndPoint + "/" + post.id);
+    const originalPosts = this.state.posts;
 
     const posts = this.state.posts.filter((p) => p.id !== post.id);
-
     this.setState({ posts });
+
+    try {
+      await http.delete(config.apiEndPoint + "/" + post.id);
+    } catch (ex) {
+      //Expected exceptions (404, bad request ,Client errors ex.response)
+      if (ex.response && ex.response.status === 404) {
+        alert("Post has alredy been deleted!!");
+      }
+      //Unexpected exceptions(Network down, server down ,db down, Bug)
+    
+      this.setState({ posts: originalPosts });
+    }
   };
 
   render() {
